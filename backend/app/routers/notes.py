@@ -7,6 +7,7 @@ from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.models import Note, NoteVersion, User
 from app.schemas.schemas import NoteCreate, NoteListOut, NoteOut, NoteUpdate
+from app.services import note_service, rag_service
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
@@ -32,19 +33,17 @@ def create_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    note = Note(**body.model_dump(), user_id=current_user.id)
-    db.add(note)
-    db.commit()
-    db.refresh(note)
-
-    # AI tasks run async — never block the save response
-    background_tasks.add_task(_autotag_and_embed, note.id)
-
+    note = note_service.create_note(db, current_user.id, body)
+    background_tasks.add_task(_run_ai_pipeline, note.id)
     return note
 
 
 @router.get("/{note_id}", response_model=NoteOut)
-def get_note(note_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_note(
+    note_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     return _get_or_404(note_id, current_user.id, db)
 
 
@@ -57,47 +56,62 @@ def update_note(
     current_user: User = Depends(get_current_user),
 ):
     note = _get_or_404(note_id, current_user.id, db)
-
-    # Save version snapshot before updating
-    db.add(NoteVersion(note_id=note.id, content_snapshot=note.content))
-
-    for field, value in body.model_dump(exclude_none=True).items():
-        setattr(note, field, value)
-
-    db.commit()
-    db.refresh(note)
-    background_tasks.add_task(_autotag_and_embed, note.id)
+    note = note_service.update_note(db, note, body)
+    background_tasks.add_task(_run_ai_pipeline, note.id)
     return note
 
 
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_note(note_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_note(
+    note_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     note = _get_or_404(note_id, current_user.id, db)
     db.delete(note)
     db.commit()
 
 
 @router.get("/{note_id}/versions")
-def get_versions(note_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_versions(
+    note_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     _get_or_404(note_id, current_user.id, db)
-    versions = db.query(NoteVersion).filter(NoteVersion.note_id == note_id).order_by(NoteVersion.created_at.desc()).all()
-    return versions
+    return (
+        db.query(NoteVersion)
+        .filter(NoteVersion.note_id == note_id)
+        .order_by(NoteVersion.created_at.desc())
+        .all()
+    )
 
 
 @router.get("/{note_id}/backlinks")
-def get_backlinks(note_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_backlinks(
+    note_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     from app.models.models import NoteLink
-    note = _get_or_404(note_id, current_user.id, db)
+    _get_or_404(note_id, current_user.id, db)
     links = db.query(NoteLink).filter(NoteLink.target_note_id == note_id).all()
     return [{"source_note_id": lnk.source_note_id, "link_type": lnk.link_type} for lnk in links]
 
 
 @router.get("/{note_id}/related")
-def get_related(note_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_related(
+    note_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     from app.models.models import NoteLink
     _get_or_404(note_id, current_user.id, db)
     links = db.query(NoteLink).filter(NoteLink.source_note_id == note_id).all()
-    return [{"target_note_id": lnk.target_note_id, "link_type": lnk.link_type, "strength": lnk.strength} for lnk in links]
+    return [
+        {"target_note_id": lnk.target_note_id, "link_type": lnk.link_type, "strength": lnk.strength}
+        for lnk in links
+    ]
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
@@ -109,6 +123,19 @@ def _get_or_404(note_id: UUID, user_id: UUID, db: Session) -> Note:
     return note
 
 
-async def _autotag_and_embed(note_id: UUID):
-    """Placeholder — wire up AI service in Phase 1."""
-    pass
+async def _run_ai_pipeline(note_id: UUID) -> None:
+    """Auto-tag + embed — runs in background, never blocks save."""
+    from app.core.database import SessionLocal
+    from app.services.ai_service import autotag
+    from app.services.note_service import apply_tags
+
+    db = SessionLocal()
+    try:
+        note = db.query(Note).filter(Note.id == note_id).first()
+        if not note or not note.content_plain:
+            return
+        await rag_service.embed_note(db, note)
+        tags = await autotag(note.content_plain)
+        apply_tags(db, note, tags, ai_generated=True)
+    finally:
+        db.close()

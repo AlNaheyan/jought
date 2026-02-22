@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    OPENAI_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
     PINECONE_API_KEY: str = ""
     PINECONE_ENVIRONMENT: str = ""
 
