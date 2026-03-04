@@ -164,26 +164,17 @@ function Toolbar({ editor, aiActions }) {
 function AIToolbarMenu({ aiActions }) {
   return (
     <DropdownMenu.Root>
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          <DropdownMenu.Trigger asChild>
-            <button
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-              style={{ background: 'transparent', color: 'var(--text-tertiary)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)' }}
-            >
-              <Sparkles size={14} />
-            </button>
-          </DropdownMenu.Trigger>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content sideOffset={6} className="rounded-md px-2 py-1 text-[11px] font-mono z-50" style={{ background: '#1C1B18', color: '#fff' }}>
-            AI Assistant
-            <Tooltip.Arrow style={{ fill: '#1C1B18' }} />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+          title="AI Assistant"
+          style={{ background: 'transparent', color: 'var(--text-tertiary)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)' }}
+        >
+          <Sparkles size={14} />
+        </button>
+      </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content

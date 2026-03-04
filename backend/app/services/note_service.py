@@ -30,8 +30,8 @@ def update_note(db: Session, note: Note, data: NoteUpdate) -> Note:
 
 def apply_tags(db: Session, note: Note, tag_names: list[str], ai_generated: bool = False) -> None:
     """Upsert tags and attach them to the note."""
-    for name in tag_names:
-        name = name.lower().strip()
+    for name in tag_names[:10]:  # cap at 10 tags per call
+        name = name.lower().strip()[:50]  # max 50 chars per tag
         tag = db.query(Tag).filter(Tag.name == name).first()
         if not tag:
             tag = Tag(name=name, is_ai_generated=ai_generated)

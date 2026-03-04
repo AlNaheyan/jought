@@ -11,6 +11,7 @@ import { Check, ChevronDown, Trash2, Clock, FileText, Sparkles, X, Copy } from '
 
 /* ── Types ── */
 const NOTE_TYPES = ['general', 'meeting', 'journal', 'todo', 'research']
+const TONES = ['formal', 'casual', 'concise', 'creative']
 
 const TYPE_META = {
   meeting:  { dot: '#a78bfa', bg: '#EDE9FE', color: '#6D28D9' },

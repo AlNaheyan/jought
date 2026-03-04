@@ -1,6 +1,9 @@
 import uuid
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
@@ -15,17 +18,19 @@ from app.schemas.schemas import (
 from app.services import ai_service, rag_service
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/ask", response_model=AskResponse)
+@limiter.limit("20/minute")
 async def ask(
+    request: Request,
     body: AskRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     answer, source_ids = await rag_service.query(db, current_user.id, body.question)
 
-    # Persist or continue conversation
     conv_id = body.conversation_id or uuid.uuid4()
     conv = db.query(AIConversation).filter(AIConversation.id == conv_id).first()
     if conv:
@@ -47,7 +52,9 @@ async def ask(
 
 
 @router.post("/summarize", response_model=SummarizeResponse)
+@limiter.limit("30/minute")
 async def summarize(
+    request: Request,
     body: SummarizeRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -60,18 +67,30 @@ async def summarize(
 
 
 @router.post("/expand", response_model=ExpandResponse)
-async def expand(body: ExpandRequest, current_user: User = Depends(get_current_user)):
+@limiter.limit("30/minute")
+async def expand(
+    request: Request,
+    body: ExpandRequest,
+    current_user: User = Depends(get_current_user),
+):
     return ExpandResponse(expanded=await ai_service.expand(body.text))
 
 
 @router.post("/rewrite", response_model=RewriteResponse)
-async def rewrite(body: RewriteRequest, current_user: User = Depends(get_current_user)):
+@limiter.limit("30/minute")
+async def rewrite(
+    request: Request,
+    body: RewriteRequest,
+    current_user: User = Depends(get_current_user),
+):
     return RewriteResponse(rewritten=await ai_service.rewrite(body.text, body.tone))
 
 
 @router.post("/autotag")
+@limiter.limit("60/minute")
 async def autotag(
-    note_id: str,
+    request: Request,
+    note_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -85,8 +104,10 @@ async def autotag(
 
 
 @router.post("/extract-actions")
+@limiter.limit("30/minute")
 async def extract_actions(
-    note_id: str,
+    request: Request,
+    note_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # ── User ─────────────────────────────────────────────────────────────────
@@ -25,21 +25,35 @@ NoteType = Literal["meeting", "journal", "todo", "research", "general"]
 
 
 class NoteCreate(BaseModel):
-    title: str = "Untitled"
+    title: str = Field(default="Untitled", max_length=500)
     content: dict[str, Any] | None = None
-    content_plain: str | None = None
+    content_plain: str | None = Field(default=None, max_length=200_000)
     note_type: NoteType = "general"
     is_private: bool = False
     folder_id: uuid.UUID | None = None
 
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, v: str) -> str:
+        stripped = v.strip()
+        return stripped if stripped else "Untitled"
+
 
 class NoteUpdate(BaseModel):
-    title: str | None = None
+    title: str | None = Field(default=None, max_length=500)
     content: dict[str, Any] | None = None
-    content_plain: str | None = None
+    content_plain: str | None = Field(default=None, max_length=200_000)
     note_type: NoteType | None = None
     is_private: bool | None = None
     folder_id: uuid.UUID | None = None
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        stripped = v.strip()
+        return stripped if stripped else "Untitled"
 
 
 class NoteOut(BaseModel):
@@ -80,8 +94,13 @@ class TagOut(BaseModel):
 # ── AI ────────────────────────────────────────────────────────────────────
 
 class AskRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1, max_length=2_000)
     conversation_id: uuid.UUID | None = None
+
+    @field_validator("question")
+    @classmethod
+    def strip_question(cls, v: str) -> str:
+        return v.strip()
 
 
 class AskResponse(BaseModel):
@@ -99,16 +118,19 @@ class SummarizeResponse(BaseModel):
 
 
 class ExpandRequest(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=10_000)
 
 
 class ExpandResponse(BaseModel):
     expanded: str
 
 
+RewriteTone = Literal["formal", "casual", "concise", "creative"]
+
+
 class RewriteRequest(BaseModel):
-    text: str
-    tone: str = "formal"
+    text: str = Field(min_length=1, max_length=10_000)
+    tone: RewriteTone = "formal"
 
 
 class RewriteResponse(BaseModel):
