@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
 
 const mainNav = [
-  { href: '/', label: 'Dashboard' },
+  { href: '/dashboard', label: 'Dashboard' },
   { href: '/ask', label: 'Ask' },
   { href: '/graph', label: 'Graph' },
   { href: '/insights', label: 'Insights' },
