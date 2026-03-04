@@ -26,3 +26,5 @@ frontend/.tanstack/
 # Misc
 .DS_Store
 *.log
+
+todos.md

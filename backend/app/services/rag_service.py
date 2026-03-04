@@ -72,9 +72,6 @@ async def query(
     top_k: int = 5,
 ) -> tuple[str, list[UUID]]:
     """Embed question → pgvector cosine similarity search → LLM answer with citations."""
-    from pgvector.sqlalchemy import Vector
-    from sqlalchemy import select, func
-
     # 1. Embed the question
     model = _get_embedding_model()
     q_vector = model.encode([question])[0].tolist()
@@ -124,11 +121,14 @@ async def query(
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful assistant answering questions based solely on the user's notes. "
-                    "Cite which note each piece of information comes from."
+                    "You are a retrieval assistant. Your ONLY source of information is the notes provided below. "
+                    "Do NOT use any knowledge from your training data. "
+                    "If the answer cannot be found in the provided notes, say: "
+                    "'I couldn't find anything about that in your notes.' "
+                    "When answering, cite which note the information comes from using [Note: title]."
                 ),
             },
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
+            {"role": "user", "content": f"Notes:\n{context}\n\nQuestion: {question}"},
         ],
         max_tokens=600,
     )
