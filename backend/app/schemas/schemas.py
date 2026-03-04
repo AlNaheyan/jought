@@ -7,25 +7,6 @@ from typing import Any, Literal
 from pydantic import BaseModel, EmailStr
 
 
-# ── Auth ──────────────────────────────────────────────────────────────────
-
-class RegisterRequest(BaseModel):
-    email: EmailStr
-    name: str
-    password: str
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
 # ── User ─────────────────────────────────────────────────────────────────
 
 class UserOut(BaseModel):

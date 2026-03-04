@@ -1,51 +1,44 @@
-from datetime import datetime, timedelta, timezone
-from typing import Any
+import time
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
 
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+_jwks_cache: dict = {"keys": None, "fetched_at": 0.0}
+_JWKS_TTL = 3600  # refresh public keys every hour
 
 
-def create_access_token(data: dict[str, Any]) -> str:
-    payload = data.copy()
-    payload["exp"] = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+def _get_jwks() -> dict:
+    now = time.time()
+    if _jwks_cache["keys"] is None or now - _jwks_cache["fetched_at"] > _JWKS_TTL:
+        response = httpx.get(settings.CLERK_JWKS_URL, timeout=10)
+        response.raise_for_status()
+        _jwks_cache["keys"] = response.json()
+        _jwks_cache["fetched_at"] = now
+    return _jwks_cache["keys"]
 
 
-def create_refresh_token(data: dict[str, Any]) -> str:
-    payload = data.copy()
-    payload["exp"] = datetime.now(timezone.utc) + timedelta(
-        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
-    )
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
-
-
-def decode_token(token: str) -> dict[str, Any]:
+def decode_clerk_token(token: str) -> dict:
     try:
-        return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+        jwks = _get_jwks()
+        payload = jwt.decode(
+            token,
+            jwks,
+            algorithms=["RS256"],
+            options={"verify_aud": False},
         )
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
 
 def get_current_user(
@@ -54,12 +47,23 @@ def get_current_user(
 ):
     from app.models.models import User
 
-    payload = decode_token(credentials.credentials)
-    user_id: str = payload.get("sub")
-    if not user_id:
+    payload = decode_clerk_token(credentials.credentials)
+    clerk_user_id: str | None = payload.get("sub")
+    if not clerk_user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.clerk_user_id == clerk_user_id).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        # Auto-provision on first API call after Clerk sign-up
+        email = payload.get("email", "")
+        name = (
+            f"{payload.get('first_name', '')} {payload.get('last_name', '')}".strip()
+            or email.split("@")[0]
+            or "User"
+        )
+        user = User(clerk_user_id=clerk_user_id, email=email, name=name)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
     return user
