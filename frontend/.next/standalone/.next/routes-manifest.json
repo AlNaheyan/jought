@@ -64,6 +64,12 @@
       "namedRegex": "^/ask(?:/)?$"
     },
     {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
       "page": "/graph",
       "regex": "^/graph(?:/)?$",
       "routeKeys": {},

@@ -4,6 +4,9 @@ CLAUDE.md
 # Environment
 .env
 backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env*.local
 
 # Python
 __pycache__/
@@ -16,9 +19,8 @@ venv/
 node_modules/
 frontend/dist/
 
-# TanStack Router auto-generated file (committed after first run)
-frontend/src/routeTree.gen.js
-frontend/src/routeTree.gen.ts
+# Next.js
+frontend/.next/
 
 # Misc
 .DS_Store

@@ -1,11 +1,12 @@
 {
   "/_not-found/page": "/_not-found",
-  "/ask/page": "/ask",
-  "/insights/page": "/insights",
-  "/note/[id]/page": "/note/[id]",
-  "/graph/page": "/graph",
   "/page": "/",
-  "/settings/page": "/settings",
   "/sign-in/[[...sign-in]]/page": "/sign-in/[[...sign-in]]",
-  "/sign-up/[[...sign-up]]/page": "/sign-up/[[...sign-up]]"
+  "/sign-up/[[...sign-up]]/page": "/sign-up/[[...sign-up]]",
+  "/(app)/ask/page": "/ask",
+  "/(app)/insights/page": "/insights",
+  "/(app)/note/[id]/page": "/note/[id]",
+  "/(app)/graph/page": "/graph",
+  "/(app)/settings/page": "/settings",
+  "/(app)/dashboard/page": "/dashboard"
 }
