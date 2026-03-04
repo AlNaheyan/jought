@@ -21,6 +21,7 @@ frontend/dist/
 
 # Next.js
 frontend/.next/
+frontend/.tanstack/
 
 # Misc
 .DS_Store

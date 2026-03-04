@@ -67,7 +67,18 @@ def delete_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from app.models.models import NoteTag, NoteVersion, Embedding, NoteLink
+
     note = _get_or_404(note_id, current_user.id, db)
+
+    # Remove child rows first to avoid FK constraint violations
+    db.query(NoteTag).filter(NoteTag.note_id == note_id).delete(synchronize_session=False)
+    db.query(NoteVersion).filter(NoteVersion.note_id == note_id).delete(synchronize_session=False)
+    db.query(Embedding).filter(Embedding.note_id == note_id).delete(synchronize_session=False)
+    db.query(NoteLink).filter(
+        (NoteLink.source_note_id == note_id) | (NoteLink.target_note_id == note_id)
+    ).delete(synchronize_session=False)
+
     db.delete(note)
     db.commit()
 

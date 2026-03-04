@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     PINECONE_API_KEY: str = ""
     PINECONE_ENVIRONMENT: str = ""
+    CHROMA_HOST: str = "localhost"
+    CHROMA_PORT: int = 8001  # 8001 locally (mapped), 8000 inside Docker network
 
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""

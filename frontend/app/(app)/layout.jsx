@@ -3,10 +3,13 @@ import ApiSetup from '@/components/ApiSetup'
 
 export default function AppLayout({ children }) {
   return (
-    <div className="flex h-screen bg-zinc-50 text-zinc-900 overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-app)' }}>
       <ApiSetup />
       <Sidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      {/* Content area: flex-1 so it fills the space after the sidebar */}
+      <div className="flex flex-1 min-w-0 overflow-hidden">
+        {children}
+      </div>
     </div>
   )
 }

@@ -3,6 +3,32 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Surfaces */
+    --bg-app:      #F5F4F0;
+    --bg-sidebar:  #EDECEA;
+    --bg-panel:    #F0EFEC;
+    --bg-editor:   #FFFFFF;
+    --bg-hover:    #E8E6E2;
+    --bg-active:   #E0DEDB;
+
+    /* Text */
+    --text-primary:     #1C1B18;
+    --text-secondary:   #706F6B;
+    --text-tertiary:    #AEADA9;
+    --text-placeholder: #C9C7C2;
+
+    /* Borders */
+    --border:       #DDDBD6;
+    --border-strong: #C5C3BE;
+
+    /* Accent — warm amber/gold */
+    --accent:       #C08030;
+    --accent-light: #FEF3E2;
+    --accent-muted: #D9A050;
+    --accent-dark:  #8B5C1A;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -11,4 +37,72 @@
   * {
     box-sizing: border-box;
   }
+
+  body {
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+  }
+
+  ::selection {
+    background-color: var(--accent-light);
+    color: var(--text-primary);
+  }
+
+  /* Subtle scrollbars */
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+}
+
+@layer utilities {
+  /* Stagger helpers for hero animations */
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+  .delay-600 { animation-delay: 600ms; }
+}
+
+/* Tiptap placeholder */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-placeholder);
+  pointer-events: none;
+  height: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* Refined prose styles for the editor */
+.prose {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  color: var(--text-primary);
+}
+.prose h1, .prose h2, .prose h3 {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.prose code {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  background: var(--bg-panel);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.87em;
+}
+.prose pre {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.prose blockquote {
+  border-left-color: var(--accent);
+  color: var(--text-secondary);
+  font-style: italic;
 }

@@ -1,1 +1,7 @@
-{}
+{
+  "/(app)/ask/page": "app/(app)/ask/page.js",
+  "/(app)/graph/page": "app/(app)/graph/page.js",
+  "/(app)/insights/page": "app/(app)/insights/page.js",
+  "/(app)/(notes)/dashboard/page": "app/(app)/(notes)/dashboard/page.js",
+  "/(app)/(notes)/note/[id]/page": "app/(app)/(notes)/note/[id]/page.js"
+}

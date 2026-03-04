@@ -1,1 +1,1 @@
-self.__NEXT_FONT_MANIFEST='{"pages":{},"app":{"/Users/alnaheyan/Desktop/projects/jought/frontend/app/layout":["static/media/26d0ba92e140f0dc-s.p.woff2","static/media/78fec81b34c4a365.p.woff2"]},"appUsingSizeAdjust":true,"pagesUsingSizeAdjust":false}';
+self.__NEXT_FONT_MANIFEST="{\"pages\":{},\"app\":{\"/Users/alnaheyan/Desktop/projects/jought/frontend/app/layout\":[\"static/media/78fec81b34c4a365.p.woff2\"]},\"appUsingSizeAdjust\":false,\"pagesUsingSizeAdjust\":false}"

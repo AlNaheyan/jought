@@ -17,6 +17,16 @@ services:
       timeout: 5s
       retries: 5
 
+  chromadb:
+    image: chromadb/chroma:latest
+    restart: unless-stopped
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "8001:8000"
+    environment:
+      IS_PERSISTENT: "TRUE"
+
   backend:
     build:
       context: ./backend
@@ -25,29 +35,36 @@ services:
     env_file: ./backend/.env
     environment:
       DATABASE_URL: postgresql://jought:jought@db:5432/jought
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
     volumes:
-      - ./backend:/app        # hot-reload in dev
+      - ./backend:/app
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+      chromadb:
+        condition: service_started
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: dev              # use the dev stage
+      target: dev
     restart: unless-stopped
+    env_file: ./frontend/.env.local
     environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     volumes:
-      - ./frontend:/app        # hot-reload in dev
-      - /app/node_modules      # keep container node_modules
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     ports:
-      - "5173:5173"
+      - "3000:3000"
     depends_on:
       - backend
 
 volumes:
   postgres_data:
+  chroma_data:
