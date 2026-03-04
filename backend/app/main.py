@@ -11,7 +11,10 @@ from app.routers import auth, notes, ai, graph, insights, notebooks, ws
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all tables if they don't exist (dev convenience — use Alembic in prod)
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        conn.commit()
     Base.metadata.create_all(bind=engine)
     yield
 

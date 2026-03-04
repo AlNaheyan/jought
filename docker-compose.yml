@@ -1,7 +1,7 @@
 services:
 
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: jought
@@ -17,16 +17,6 @@ services:
       timeout: 5s
       retries: 5
 
-  chromadb:
-    image: chromadb/chroma:latest
-    restart: unless-stopped
-    volumes:
-      - chroma_data:/chroma/chroma
-    ports:
-      - "8001:8000"
-    environment:
-      IS_PERSISTENT: "TRUE"
-
   backend:
     build:
       context: ./backend
@@ -35,8 +25,6 @@ services:
     env_file: ./backend/.env
     environment:
       DATABASE_URL: postgresql://jought:jought@db:5432/jought
-      CHROMA_HOST: chromadb
-      CHROMA_PORT: 8000
     volumes:
       - ./backend:/app
     ports:
@@ -44,8 +32,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      chromadb:
-        condition: service_started
 
   frontend:
     build:
@@ -53,7 +39,7 @@ services:
       dockerfile: Dockerfile
       target: dev
     restart: unless-stopped
-    env_file: ./frontend/.env.local
+    env_file: ./frontend/.env
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     volumes:
@@ -67,4 +53,3 @@ services:
 
 volumes:
   postgres_data:
-  chroma_data:

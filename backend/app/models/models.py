@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean, DateTime, Enum, Float, ForeignKey,
     Integer, String, Text, JSON
@@ -124,7 +125,7 @@ class Embedding(Base):
     note_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("notes.id"), nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
-    # Actual vector stored in Pinecone/ChromaDB; this row is metadata only
+    embedding: Mapped[list] = mapped_column(Vector(384), nullable=True)
 
     note: Mapped["Note"] = relationship("Note", back_populates="embeddings")
 

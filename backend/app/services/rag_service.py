@@ -1,8 +1,7 @@
-"""RAG pipeline: embed notes on save, similarity search on query."""
+"""RAG pipeline: embed notes on save, similarity search via pgvector."""
 
 from uuid import UUID
 
-import chromadb
 from openai import AsyncOpenAI
 from sqlalchemy.orm import Session
 
@@ -12,11 +11,8 @@ from app.models.models import Embedding, Note
 CHAT_MODEL = "openai/gpt-oss-120b:free"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
-COLLECTION_NAME = "jought_notes"
 
 _chat_client: AsyncOpenAI | None = None
-_chroma_client: chromadb.HttpClient | None = None
-_collection = None
 
 
 def _get_chat_client() -> AsyncOpenAI:
@@ -28,18 +24,6 @@ def _get_chat_client() -> AsyncOpenAI:
             timeout=60,
         )
     return _chat_client
-
-
-def _get_collection():
-    """Lazy-init ChromaDB HTTP client and get (or create) the collection."""
-    global _chroma_client, _collection
-    if _collection is None:
-        _chroma_client = chromadb.HttpClient(host=settings.CHROMA_HOST, port=settings.CHROMA_PORT)
-        _collection = _chroma_client.get_or_create_collection(
-            name=COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"},
-        )
-    return _collection
 
 
 def _get_embedding_model():
@@ -56,17 +40,11 @@ def _chunk_text(text: str) -> list[str]:
 
 
 async def embed_note(db: Session, note: Note) -> None:
-    """Chunk + embed note, store vectors in ChromaDB, metadata in Postgres."""
+    """Chunk + embed note content, store vectors in Postgres via pgvector."""
     if not note.content_plain:
         return
 
-    # Remove old embeddings from both stores
     db.query(Embedding).filter(Embedding.note_id == note.id).delete()
-    collection = _get_collection()
-    # Delete any existing chunks for this note
-    existing = collection.get(where={"note_id": str(note.id)})
-    if existing["ids"]:
-        collection.delete(ids=existing["ids"])
 
     chunks = _chunk_text(note.content_plain)
     if not chunks:
@@ -76,21 +54,13 @@ async def embed_note(db: Session, note: Note) -> None:
     model = _get_embedding_model()
     vectors = model.encode(chunks).tolist()
 
-    # Upsert into ChromaDB
-    ids = [f"{note.id}_{i}" for i in range(len(chunks))]
-    collection.upsert(
-        ids=ids,
-        embeddings=vectors,
-        documents=chunks,
-        metadatas=[
-            {"user_id": str(note.user_id), "note_id": str(note.id), "chunk_index": i}
-            for i in range(len(chunks))
-        ],
-    )
-
-    # Store chunk metadata in Postgres
-    for i, chunk in enumerate(chunks):
-        db.add(Embedding(note_id=note.id, chunk_index=i, chunk_text=chunk))
+    for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
+        db.add(Embedding(
+            note_id=note.id,
+            chunk_index=i,
+            chunk_text=chunk,
+            embedding=vector,
+        ))
 
     db.commit()
 
@@ -101,38 +71,39 @@ async def query(
     question: str,
     top_k: int = 5,
 ) -> tuple[str, list[UUID]]:
-    """Embed question → ChromaDB similarity search → LLM answer with citations."""
+    """Embed question → pgvector cosine similarity search → LLM answer with citations."""
+    from pgvector.sqlalchemy import Vector
+    from sqlalchemy import select, func
+
     # 1. Embed the question
     model = _get_embedding_model()
     q_vector = model.encode([question])[0].tolist()
 
-    # 2. Similarity search in ChromaDB, filtered to this user's notes
-    collection = _get_collection()
-    results = collection.query(
-        query_embeddings=[q_vector],
-        n_results=top_k,
-        where={"user_id": str(user_id)},
-        include=["documents", "metadatas", "distances"],
+    # 2. Cosine similarity search — only chunks belonging to this user's notes
+    results = (
+        db.query(Embedding)
+        .join(Note, Embedding.note_id == Note.id)
+        .filter(Note.user_id == user_id, Note.is_private.is_(False))
+        .filter(Embedding.embedding.isnot(None))
+        .order_by(Embedding.embedding.cosine_distance(q_vector))
+        .limit(top_k)
+        .all()
     )
 
-    # 3. Build context from retrieved chunks
-    source_note_ids: list[UUID] = []
-    context_parts: list[str] = []
+    # 3. Build context from top chunks
+    if results:
+        seen: set[UUID] = set()
+        context_parts: list[str] = []
+        source_note_ids: list[UUID] = []
 
-    if results["ids"] and results["ids"][0]:
-        seen_note_ids: set[str] = set()
-        for doc, meta in zip(results["documents"][0], results["metadatas"][0]):
-            note_id_str = meta["note_id"]
-            if note_id_str not in seen_note_ids:
-                seen_note_ids.add(note_id_str)
-                note = db.query(Note).filter(Note.id == note_id_str).first()
-                title = note.title if note else "Untitled"
-                source_note_ids.append(UUID(note_id_str))
-            else:
-                title = "..."
-            context_parts.append(f"[Note: {title}]\n{doc}")
-
-    if not context_parts:
+        for emb in results:
+            note = db.get(Note, emb.note_id)
+            title = note.title if note else "Untitled"
+            context_parts.append(f"[Note: {title}]\n{emb.chunk_text}")
+            if emb.note_id not in seen:
+                seen.add(emb.note_id)
+                source_note_ids.append(emb.note_id)
+    else:
         # Fallback: no embeddings yet, use recent notes
         notes = (
             db.query(Note)
