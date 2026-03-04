@@ -8,17 +8,20 @@ import Link from '@tiptap/extension-link'
 import { common, createLowlight } from 'lowlight'
 import { useEffect } from 'react'
 import * as Tooltip from '@radix-ui/react-tooltip'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   Bold, Italic, Strikethrough, Code, Code2,
   Heading1, Heading2, Heading3,
   List, ListOrdered, Quote,
   Undo2, Redo2,
-  Minus,
+  Minus, Sparkles,
 } from 'lucide-react'
+
+const TONES = ['formal', 'casual', 'concise', 'creative']
 
 const lowlight = createLowlight(common)
 
-export default function Editor({ content, onChange }) {
+export default function Editor({ content, onChange, aiActions }) {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -51,7 +54,7 @@ export default function Editor({ content, onChange }) {
       <div className="w-full">
         {editor && (
           <>
-            <Toolbar editor={editor} />
+            <Toolbar editor={editor} aiActions={aiActions} />
 
             {/* Floating bubble menu on text selection */}
             <BubbleMenu
@@ -124,7 +127,7 @@ const TOOLBAR_GROUPS = (editor) => [
   ],
 ]
 
-function Toolbar({ editor }) {
+function Toolbar({ editor, aiActions }) {
   const groups = TOOLBAR_GROUPS(editor)
 
   return (
@@ -147,7 +150,75 @@ function Toolbar({ editor }) {
           {gi < groups.length - 1 && <Sep />}
         </div>
       ))}
+
+      {aiActions && (
+        <>
+          <Sep />
+          <AIToolbarMenu aiActions={aiActions} />
+        </>
+      )}
     </div>
+  )
+}
+
+function AIToolbarMenu({ aiActions }) {
+  return (
+    <DropdownMenu.Root>
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          <DropdownMenu.Trigger asChild>
+            <button
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+              style={{ background: 'transparent', color: 'var(--text-tertiary)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)' }}
+            >
+              <Sparkles size={14} />
+            </button>
+          </DropdownMenu.Trigger>
+        </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content sideOffset={6} className="rounded-md px-2 py-1 text-[11px] font-mono z-50" style={{ background: '#1C1B18', color: '#fff' }}>
+            AI Assistant
+            <Tooltip.Arrow style={{ fill: '#1C1B18' }} />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          sideOffset={6}
+          align="start"
+          className="z-50 min-w-[180px] rounded-xl p-1.5 outline-none"
+          style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 8px 32px -8px rgba(0,0,0,0.14)' }}
+        >
+          <AIMenuItem onSelect={aiActions.onSummarize} icon="✦">Summarize note</AIMenuItem>
+          <AIMenuItem onSelect={aiActions.onExpand} icon="↗">Expand text</AIMenuItem>
+          <DropdownMenu.Separator className="my-1" style={{ height: '1px', background: 'var(--border)' }} />
+          <p className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider" style={{ color: 'var(--text-placeholder)' }}>Rewrite tone</p>
+          {TONES.map((tone) => (
+            <AIMenuItem key={tone} onSelect={() => aiActions.onRewrite(tone)} icon="↺">
+              {tone.charAt(0).toUpperCase() + tone.slice(1)}
+            </AIMenuItem>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  )
+}
+
+function AIMenuItem({ onSelect, icon, children }) {
+  return (
+    <DropdownMenu.Item
+      onSelect={onSelect}
+      className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-mono outline-none cursor-pointer"
+      style={{ color: 'var(--text-secondary)' }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+    >
+      <span className="text-[11px] w-4 text-center" style={{ color: 'var(--accent)' }}>{icon}</span>
+      {children}
+    </DropdownMenu.Item>
   )
 }
 

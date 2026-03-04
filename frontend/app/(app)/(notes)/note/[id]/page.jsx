@@ -7,7 +7,7 @@ import { getNote, updateNote, deleteNote, summarizeNote, expandText, rewriteText
 import Editor from '@/components/Editor'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
-import { Check, ChevronDown, Trash2, Clock, FileText, Sparkles, X, Copy, RotateCcw } from 'lucide-react'
+import { Check, ChevronDown, Trash2, Clock, FileText, Sparkles, X, Copy } from 'lucide-react'
 
 /* ── Types ── */
 const NOTE_TYPES = ['general', 'meeting', 'journal', 'todo', 'research']
@@ -25,8 +25,6 @@ const SAVE_STATE = {
   saving:  { label: 'Saving…',  color: 'var(--text-tertiary)' },
   unsaved: { label: 'Unsaved',  color: '#f59e0b' },
 }
-
-const TONES = ['formal', 'casual', 'concise', 'creative']
 
 function wordCount(text) {
   return text.trim() ? text.trim().split(/\s+/).length : 0
@@ -169,15 +167,6 @@ export default function NoteEditor() {
               {save_state.label}
             </span>
 
-            {/* AI button */}
-            <AIMenu
-              onSummarize={() => runAI('summarize')}
-              onExpand={() => runAI('expand')}
-              onRewrite={(tone) => runAI('rewrite', { tone })}
-              disabled={!plainText.trim()}
-              active={aiPanel}
-            />
-
             <DeleteDialog onConfirm={() => remove()} deleting={deleting} />
           </div>
         </div>
@@ -204,7 +193,15 @@ export default function NoteEditor() {
               </span>
             </div>
 
-            <Editor content={content} onChange={handleContentChange} />
+            <Editor
+              content={content}
+              onChange={handleContentChange}
+              aiActions={{
+                onSummarize: () => runAI('summarize'),
+                onExpand:    () => runAI('expand'),
+                onRewrite:   (tone) => runAI('rewrite', { tone }),
+              }}
+            />
           </div>
         </div>
       </div>
@@ -312,79 +309,6 @@ export default function NoteEditor() {
         </div>
       )}
     </div>
-  )
-}
-
-/* ── AI Menu (top bar button) ── */
-function AIMenu({ onSummarize, onExpand, onRewrite, disabled, active }) {
-  return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
-        <button
-          disabled={disabled}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium transition-all disabled:opacity-40"
-          style={{
-            background: active ? 'var(--accent-light)' : 'var(--bg-hover)',
-            color: active ? 'var(--accent)' : 'var(--text-secondary)',
-          }}
-        >
-          <Sparkles size={11} />
-          AI
-        </button>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          sideOffset={6}
-          align="end"
-          className="z-50 min-w-[180px] rounded-xl p-1.5 outline-none"
-          style={{
-            background: '#fff',
-            border: '1px solid var(--border)',
-            boxShadow: '0 8px 32px -8px rgba(0,0,0,0.14)',
-          }}
-        >
-          <AIMenuItem onSelect={onSummarize} icon="✦">Summarize note</AIMenuItem>
-          <AIMenuItem onSelect={onExpand} icon="↗">Expand text</AIMenuItem>
-          <DropdownMenu.Separator className="my-1" style={{ height: '1px', background: 'var(--border)' }} />
-          <p className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider" style={{ color: 'var(--text-placeholder)' }}>Rewrite tone</p>
-          {TONES.map((tone) => (
-            <AIMenuItem key={tone} onSelect={() => onRewrite(tone)} icon="↺">
-              {tone.charAt(0).toUpperCase() + tone.slice(1)}
-            </AIMenuItem>
-          ))}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
-  )
-}
-
-function AIMenuItem({ onSelect, icon, children }) {
-  return (
-    <DropdownMenu.Item
-      onSelect={onSelect}
-      className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-mono outline-none cursor-pointer"
-      style={{ color: 'var(--text-secondary)' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-    >
-      <span className="text-[11px] w-4 text-center" style={{ color: 'var(--accent)' }}>{icon}</span>
-      {children}
-    </DropdownMenu.Item>
-  )
-}
-
-function AIChip({ onClick, loading, children }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className="px-2.5 py-1 rounded-full text-[10px] font-mono transition-all disabled:opacity-40"
-      style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-light)'; e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent-muted)' }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-    >
-      {children}
-    </button>
   )
 }
 
