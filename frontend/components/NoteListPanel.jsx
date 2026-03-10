@@ -1,9 +1,11 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { getNotes, createNote, deleteNote } from '@/lib/api'
+import { UserButton } from '@clerk/nextjs'
 
 const TYPE_DOT = {
   meeting:  '#a78bfa',
@@ -12,6 +14,29 @@ const TYPE_DOT = {
   research: '#60a5fa',
   general:  '#AEADA9',
 }
+
+const bottomNav = [
+  { href: '/insights', label: 'Insights', icon: (
+    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <path d="M12 12V7.5M7.5 12V3M3 12V8.5" />
+    </svg>
+  )},
+  { href: '/graph', label: 'Graph', icon: (
+    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <circle cx="7" cy="7" r="2" />
+      <circle cx="2.5" cy="4.5" r="1.25" />
+      <circle cx="12" cy="4.5" r="1.25" />
+      <circle cx="5" cy="12" r="1.25" />
+      <path d="M3.5 5.5l2.5 1M10.5 5.5l-2.5 1M6 9.5l.5-1" />
+    </svg>
+  )},
+  { href: '/settings', label: 'Settings', icon: (
+    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7" cy="7" r="2" />
+      <path d="M11.8 9a1.1 1.1 0 00.22 1.22l.04.04a1.35 1.35 0 01-1.91 1.91l-.04-.04a1.1 1.1 0 00-1.22-.22 1.1 1.1 0 00-.68 1.03v.06a1.35 1.35 0 01-2.7 0v-.03a1.1 1.1 0 00-.73-1.03 1.1 1.1 0 00-1.22.22l-.04.04a1.35 1.35 0 01-1.91-1.91l.04-.04a1.1 1.1 0 00.22-1.22A1.1 1.1 0 001.04 8.2H1a1.35 1.35 0 010-2.7h.03a1.1 1.1 0 001.03-.73 1.1 1.1 0 00-.22-1.22l-.04-.04a1.35 1.35 0 011.91-1.91l.04.04a1.1 1.1 0 001.22.22A1.1 1.1 0 005.7 1.04V1a1.35 1.35 0 012.7 0v.03a1.1 1.1 0 00.68 1.03 1.1 1.1 0 001.22-.22l.04-.04a1.35 1.35 0 011.91 1.91l-.04.04a1.1 1.1 0 00-.22 1.22 1.1 1.1 0 001.03.68H13a1.35 1.35 0 010 2.7h-.03a1.1 1.1 0 00-1.17.65z" />
+    </svg>
+  )},
+]
 
 export default function NoteListPanel() {
   const router       = useRouter()
@@ -48,14 +73,24 @@ export default function NoteListPanel() {
   return (
     <div
       className="shrink-0 flex flex-col h-full"
-      style={{ width: '256px', background: 'var(--bg-panel)', borderRight: '1px solid var(--border)' }}
+      style={{ width: '256px', background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border)' }}
     >
-      {/* Header */}
+      {/* Logo */}
       <div
         className="flex items-center justify-between px-4 shrink-0"
         style={{ height: '56px', borderBottom: '1px solid var(--border)' }}
       >
-        <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Notes</span>
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div
+            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+            style={{ background: 'var(--accent)' }}
+          >
+            <span className="text-white text-[11px] font-display italic font-bold leading-none">J</span>
+          </div>
+          <span className="font-semibold text-sm tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            Jought
+          </span>
+        </Link>
         <button
           onClick={() => newNote()}
           disabled={creating}
@@ -179,14 +214,34 @@ export default function NoteListPanel() {
         )}
       </div>
 
-      {/* Footer count */}
-      <div
-        className="px-4 py-2.5 shrink-0"
-        style={{ borderTop: '1px solid var(--border)' }}
-      >
-        <p className="text-[10px] font-mono" style={{ color: 'var(--text-tertiary)' }}>
-          {notes.length} note{notes.length !== 1 ? 's' : ''}
-        </p>
+      {/* Bottom nav + account */}
+      <div className="shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="px-2 py-2 space-y-0.5">
+          {bottomNav.map(({ href, label, icon }) => {
+            const active = pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] transition-colors"
+                style={{
+                  background: active ? 'var(--bg-active)' : 'transparent',
+                  color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                  fontWeight: active ? 600 : 400,
+                }}
+                onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)' }}}
+                onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)' }}}
+              >
+                {icon}
+                {label}
+              </Link>
+            )
+          })}
+        </div>
+        <div className="flex items-center gap-2.5 px-5 py-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+          <UserButton afterSignOutUrl="/sign-in" />
+          <span className="text-[11px] font-mono" style={{ color: 'var(--text-tertiary)' }}>Account</span>
+        </div>
       </div>
     </div>
   )
