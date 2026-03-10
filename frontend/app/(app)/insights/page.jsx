@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getActivity, getSentiment, getInsightsSummary, getInsightsStats } from '@/lib/api'
+import { getActivity, getSentiment, getInsightsSummary, getInsightsStats, generateInsightsSummary } from '@/lib/api'
 
 // ── Heatmap ────────────────────────────────────────────────────────────────
 
@@ -186,8 +186,9 @@ export default function Insights() {
   const [sentimentData, setSentimentData] = useState([])
   const [stats, setStats] = useState(null)
   const [summaryText, setSummaryText] = useState('')
+  const [summaryGeneratedAt, setSummaryGeneratedAt] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [summaryLoading, setSummaryLoading] = useState(true)
+  const [summaryLoading, setSummaryLoading] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -204,11 +205,27 @@ export default function Insights() {
       .catch((e) => setError(e?.message ?? 'Failed to load insights'))
       .finally(() => setLoading(false))
 
+    // Load stored summary (no generation)
     getInsightsSummary()
-      .then((d) => setSummaryText(d.summary))
-      .catch(() => setSummaryText('Could not generate summary.'))
-      .finally(() => setSummaryLoading(false))
+      .then((d) => {
+        setSummaryText(d.summary || '')
+        setSummaryGeneratedAt(d.generated_at)
+      })
+      .catch(() => {})
   }, [])
+
+  const handleGenerateSummary = async () => {
+    setSummaryLoading(true)
+    try {
+      const d = await generateInsightsSummary()
+      setSummaryText(d.summary)
+      setSummaryGeneratedAt(d.generated_at)
+    } catch {
+      setSummaryText('Could not generate summary. Try again.')
+    } finally {
+      setSummaryLoading(false)
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-8 py-12">
@@ -266,7 +283,30 @@ export default function Insights() {
         </div>
 
         <div className="rounded-xl border border-zinc-200 bg-white p-6">
-          <p className="text-sm font-medium text-zinc-700 mb-4">Weekly summary</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-medium text-zinc-700">Weekly summary</p>
+            <button
+              onClick={handleGenerateSummary}
+              disabled={summaryLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-medium transition-all disabled:opacity-50"
+              style={{
+                background: summaryText ? 'var(--bg-hover, #f4f4f5)' : '#1C1B18',
+                color: summaryText ? '#71717a' : '#fff',
+                border: summaryText ? '1px solid #e4e4e7' : 'none',
+              }}
+            >
+              {summaryLoading ? (
+                <>
+                  <span className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />
+                  Generating…
+                </>
+              ) : summaryText ? (
+                'Regenerate'
+              ) : (
+                'Generate summary'
+              )}
+            </button>
+          </div>
           {summaryLoading ? (
             <div className="space-y-2">
               <div className="h-3 bg-zinc-100 rounded animate-pulse w-full" />
@@ -275,8 +315,21 @@ export default function Insights() {
               <div className="h-3 bg-zinc-100 rounded animate-pulse w-full mt-3" />
               <div className="h-3 bg-zinc-100 rounded animate-pulse w-3/4" />
             </div>
+          ) : summaryText ? (
+            <>
+              <p className="font-mono text-xs text-zinc-600 leading-relaxed whitespace-pre-wrap">{summaryText}</p>
+              {summaryGeneratedAt && (
+                <p className="font-mono text-[10px] text-zinc-400 mt-3 pt-2" style={{ borderTop: '1px solid #f4f4f5' }}>
+                  generated {new Date(summaryGeneratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </>
           ) : (
-            <p className="font-mono text-xs text-zinc-600 leading-relaxed whitespace-pre-wrap">{summaryText}</p>
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <p className="font-mono text-xs text-zinc-400">
+                Press the button to generate an AI summary of your week.
+              </p>
+            </div>
           )}
         </div>
       </div>

@@ -42,6 +42,7 @@ export const getClusters = () => api.get('/api/graph/clusters').then((r) => r.da
 export const getSentiment = () => api.get('/api/insights/sentiment').then((r) => r.data)
 export const getActivity = () => api.get('/api/insights/activity').then((r) => r.data)
 export const getInsightsSummary = () => api.get('/api/insights/summary').then((r) => r.data)
+export const generateInsightsSummary = () => api.post('/api/insights/summary').then((r) => r.data)
 export const getInsightsStats = () => api.get('/api/insights/stats').then((r) => r.data)
 
 // ── Notebooks ──────────────────────────────────────────────────────────────

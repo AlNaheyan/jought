@@ -6,7 +6,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Link from '@tiptap/extension-link'
 import { common, createLowlight } from 'lowlight'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
@@ -14,14 +14,16 @@ import {
   Heading1, Heading2, Heading3,
   List, ListOrdered, Quote,
   Undo2, Redo2,
-  Minus, Sparkles,
+  Sparkles,
 } from 'lucide-react'
 
 const TONES = ['formal', 'casual', 'concise', 'creative']
 
 const lowlight = createLowlight(common)
 
-export default function Editor({ content, onChange, aiActions }) {
+export default function Editor({ content, onChange, onEditorReady, aiActions }) {
+  const readyFired = useRef(false)
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -41,6 +43,14 @@ export default function Editor({ content, onChange, aiActions }) {
       },
     },
   })
+
+  // Expose editor instance to parent — fires as soon as editor is ready
+  useEffect(() => {
+    if (editor && onEditorReady && !readyFired.current) {
+      readyFired.current = true
+      onEditorReady(editor)
+    }
+  }, [editor, onEditorReady])
 
   useEffect(() => {
     if (!editor || content === undefined) return
