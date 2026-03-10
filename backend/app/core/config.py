@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     S3_BUCKET: str = ""
 
-    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
 
 settings = Settings()

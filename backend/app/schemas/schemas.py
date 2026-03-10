@@ -162,3 +162,63 @@ class GraphOut(BaseModel):
 class InviteRequest(BaseModel):
     email: EmailStr
     role: Literal["viewer", "commenter", "editor", "admin"] = "viewer"
+
+
+class NotebookCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+
+
+class NotebookUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+
+
+class NotebookOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    name: str
+    owner_id: uuid.UUID
+
+
+# ── Insights ───────────────────────────────────────────────────────────────
+
+class ActivityPoint(BaseModel):
+    date: str   # "YYYY-MM-DD"
+    count: int
+
+
+class SentimentPoint(BaseModel):
+    date: str   # "YYYY-MM-DD"
+    score: float
+    title: str
+
+
+class InsightsStats(BaseModel):
+    total_notes: int
+    notes_this_week: int
+    top_note_type: str
+    total_words: int
+
+
+class InsightsSummaryOut(BaseModel):
+    summary: str
+    generated_at: datetime | None = None
+
+
+# ── Folders ───────────────────────────────────────────────────────────────
+
+class FolderCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    parent_id: uuid.UUID | None = None
+
+
+class FolderUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+
+
+class FolderOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    name: str
+    parent_id: uuid.UUID | None

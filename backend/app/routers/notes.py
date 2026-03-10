@@ -17,12 +17,18 @@ def list_notes(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, le=100),
     note_type: str | None = None,
+    search: str | None = Query(None, max_length=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     q = db.query(Note).filter(Note.user_id == current_user.id)
     if note_type:
         q = q.filter(Note.note_type == note_type)
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            (Note.title.ilike(term)) | (Note.content_plain.ilike(term))
+        )
     return q.order_by(Note.updated_at.desc()).offset(skip).limit(limit).all()
 
 
@@ -135,9 +141,9 @@ def _get_or_404(note_id: UUID, user_id: UUID, db: Session) -> Note:
 
 
 async def _run_ai_pipeline(note_id: UUID) -> None:
-    """Auto-tag + embed — runs in background, never blocks save."""
+    """Auto-tag + embed + sentiment — runs in background, never blocks save."""
     from app.core.database import SessionLocal
-    from app.services.ai_service import autotag
+    from app.services.ai_service import autotag, sentiment as compute_sentiment
     from app.services.note_service import apply_tags
 
     db = SessionLocal()
@@ -148,5 +154,8 @@ async def _run_ai_pipeline(note_id: UUID) -> None:
         await rag_service.embed_note(db, note)
         tags = await autotag(note.content_plain)
         apply_tags(db, note, tags, ai_generated=True)
+        score = await compute_sentiment(note.content_plain[:3000])
+        note.sentiment_score = score
+        db.commit()
     finally:
         db.close()

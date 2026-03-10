@@ -181,7 +181,7 @@ function AIToolbarMenu({ aiActions }) {
           sideOffset={6}
           align="start"
           className="z-50 min-w-[180px] rounded-xl p-1.5 outline-none"
-          style={{ background: '#fff', border: '1px solid var(--border)', boxShadow: '0 8px 32px -8px rgba(0,0,0,0.14)' }}
+          style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)', boxShadow: '0 8px 32px -8px rgba(0,0,0,0.14)' }}
         >
           <AIMenuItem onSelect={aiActions.onSummarize} icon="✦">Summarize note</AIMenuItem>
           <AIMenuItem onSelect={aiActions.onExpand} icon="↗">Expand text</AIMenuItem>

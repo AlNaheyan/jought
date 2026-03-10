@@ -20,7 +20,8 @@ def update_note(db: Session, note: Note, data: NoteUpdate) -> Note:
     # Snapshot current content before applying update
     db.add(NoteVersion(note_id=note.id, content_snapshot=note.content))
 
-    for field, value in data.model_dump(exclude_none=True).items():
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(note, field, value)
 
     db.commit()

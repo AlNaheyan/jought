@@ -55,7 +55,11 @@ def get_current_user(
     user = db.query(User).filter(User.clerk_user_id == clerk_user_id).first()
     if not user:
         # Auto-provision on first API call after Clerk sign-up
-        email = payload.get("email", "")
+        email = (
+            payload.get("email")
+            or payload.get("email_addresses", [{}])[0].get("email_address")
+            or f"{clerk_user_id}@placeholder.local"
+        )
         name = (
             f"{payload.get('first_name', '')} {payload.get('last_name', '')}".strip()
             or email.split("@")[0]

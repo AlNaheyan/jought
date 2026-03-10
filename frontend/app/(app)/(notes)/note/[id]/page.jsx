@@ -151,15 +151,15 @@ export default function NoteEditor() {
     : null
 
   return (
-    <div className="flex h-full bg-white">
+    <div className="flex h-full" style={{ background: 'var(--bg-editor)' }}>
 
       {/* ── Main editor column ── */}
       <div className="flex flex-col flex-1 min-w-0">
 
         {/* Top bar */}
         <div
-          className="flex items-center justify-between px-6 shrink-0 sticky top-0 z-10 bg-white/92"
-          style={{ height: '48px', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(8px)' }}
+          className="flex items-center justify-between px-6 shrink-0 sticky top-0 z-10"
+          style={{ height: '48px', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(8px)', background: 'color-mix(in srgb, var(--bg-editor) 92%, transparent)' }}
         >
           <NoteTypeDropdown value={noteType} onChange={handleTypeChange} meta={meta} />
 
@@ -334,7 +334,7 @@ function NoteTypeDropdown({ value, onChange, meta }) {
           align="start"
           className="z-50 min-w-[160px] rounded-xl p-1 outline-none"
           style={{
-            background: '#fff',
+            background: 'var(--bg-panel)',
             border: '1px solid var(--border)',
             boxShadow: '0 8px 32px -8px rgba(0,0,0,0.14), 0 2px 8px -2px rgba(0,0,0,0.06)',
           }}

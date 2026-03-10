@@ -15,10 +15,18 @@ from app.schemas.schemas import (
     RewriteRequest, RewriteResponse,
     SummarizeRequest, SummarizeResponse,
 )
+from openai import RateLimitError
+
 from app.services import ai_service, rag_service
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _handle_openai_error(e: Exception) -> None:
+    if isinstance(e, RateLimitError):
+        raise HTTPException(status_code=429, detail="AI provider rate limit reached. Try again later or add credits to your OpenRouter account.")
+    raise HTTPException(status_code=502, detail="AI provider error. Please try again.")
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -29,7 +37,10 @@ async def ask(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    answer, source_ids = await rag_service.query(db, current_user.id, body.question)
+    try:
+        answer, source_ids = await rag_service.query(db, current_user.id, body.question)
+    except Exception as e:
+        _handle_openai_error(e)
 
     conv_id = body.conversation_id or uuid.uuid4()
     conv = db.query(AIConversation).filter(AIConversation.id == conv_id).first()
@@ -62,7 +73,10 @@ async def summarize(
     note = db.query(Note).filter(Note.id == body.note_id, Note.user_id == current_user.id).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
-    summary = await ai_service.summarize(note.content_plain or "")
+    try:
+        summary = await ai_service.summarize(note.content_plain or "")
+    except Exception as e:
+        _handle_openai_error(e)
     return SummarizeResponse(summary=summary)
 
 
@@ -73,7 +87,10 @@ async def expand(
     body: ExpandRequest,
     current_user: User = Depends(get_current_user),
 ):
-    return ExpandResponse(expanded=await ai_service.expand(body.text))
+    try:
+        return ExpandResponse(expanded=await ai_service.expand(body.text))
+    except Exception as e:
+        _handle_openai_error(e)
 
 
 @router.post("/rewrite", response_model=RewriteResponse)
@@ -83,7 +100,10 @@ async def rewrite(
     body: RewriteRequest,
     current_user: User = Depends(get_current_user),
 ):
-    return RewriteResponse(rewritten=await ai_service.rewrite(body.text, body.tone))
+    try:
+        return RewriteResponse(rewritten=await ai_service.rewrite(body.text, body.tone))
+    except Exception as e:
+        _handle_openai_error(e)
 
 
 @router.post("/autotag")

@@ -77,6 +77,48 @@ async def autotag(text: str) -> list[str]:
     return [t.strip() for t in raw.split(",") if t.strip()]
 
 
+async def sentiment(text: str) -> float:
+    try:
+        response = await _get_client().chat.completions.create(
+            model=CHAT_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Return ONLY a single decimal number between -1.0 (very negative) "
+                        "and 1.0 (very positive) representing the sentiment of this text. "
+                        "No explanation, just the number."
+                    ),
+                },
+                {"role": "user", "content": text[:3000]},
+            ],
+            max_tokens=10 + REASONING_BUFFER,
+        )
+        raw = response.choices[0].message.content.strip()
+        score = float(raw)
+        return max(-1.0, min(1.0, score))
+    except Exception:
+        return 0.0
+
+
+async def weekly_summary(notes_text: str) -> str:
+    response = await _get_client().chat.completions.create(
+        model=CHAT_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "Write a brief 2-3 paragraph weekly summary of what was worked on "
+                    "based on these notes. Be concise and highlight key themes and accomplishments."
+                ),
+            },
+            {"role": "user", "content": notes_text[:6000]},
+        ],
+        max_tokens=400 + REASONING_BUFFER,
+    )
+    return response.choices[0].message.content.strip()
+
+
 async def extract_actions(text: str) -> list[str]:
     response = await _get_client().chat.completions.create(
         model=CHAT_MODEL,

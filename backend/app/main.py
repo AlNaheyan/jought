@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 from app.core.config import settings
 from app.core.database import engine
 from app.models.models import Base
-from app.routers import auth, notes, ai, graph, insights, notebooks, ws
+from app.routers import auth, notes, ai, graph, insights, notebooks, ws, folders
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -45,6 +45,7 @@ app.include_router(graph.router)
 app.include_router(insights.router)
 app.include_router(notebooks.router)
 app.include_router(ws.router)
+app.include_router(folders.router)
 
 
 @app.get("/health")

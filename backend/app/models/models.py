@@ -43,6 +43,7 @@ class Note(Base):
         default="general",
     )
     is_private: Mapped[bool] = mapped_column(Boolean, default=False)
+    sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     folder_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("folders.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
@@ -150,6 +151,17 @@ class NotebookMember(Base):
     )
 
     notebook: Mapped["Notebook"] = relationship("Notebook", back_populates="members")
+
+
+class WeeklySummary(Base):
+    __tablename__ = "weekly_summaries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    week_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class AIConversation(Base):

@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getNotes, createNote, deleteNote } from '@/lib/api'
 
 const TYPE_DOT = {
@@ -18,10 +18,16 @@ export default function NoteListPanel() {
   const pathname     = usePathname()
   const queryClient  = useQueryClient()
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search])
 
   const { data: notes = [], isLoading } = useQuery({
-    queryKey: ['notes'],
-    queryFn:  getNotes,
+    queryKey: ['notes', debouncedSearch],
+    queryFn:  () => getNotes(debouncedSearch ? { search: debouncedSearch } : undefined),
   })
 
   const { mutate: newNote, isPending: creating } = useMutation({
@@ -38,10 +44,6 @@ export default function NoteListPanel() {
   })
 
   const activeId = pathname.startsWith('/note/') ? pathname.split('/note/')[1] : null
-
-  const filtered = notes.filter((n) =>
-    !search || (n.title ?? '').toLowerCase().includes(search.toLowerCase())
-  )
 
   return (
     <div
@@ -101,7 +103,7 @@ export default function NoteListPanel() {
               />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
             <p className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
               {search ? 'No notes match' : 'No notes yet'}
@@ -118,7 +120,7 @@ export default function NoteListPanel() {
           </div>
         ) : (
           <div className="px-2 py-1 space-y-0.5">
-            {filtered.map((note) => {
+            {notes.map((note) => {
               const isActive  = note.id === activeId
               const dot       = TYPE_DOT[note.note_type] ?? TYPE_DOT.general
               const date      = new Date(note.updated_at).toLocaleDateString('en-US', {
@@ -155,7 +157,12 @@ export default function NoteListPanel() {
 
                   {/* Delete on hover */}
                   <button
-                    onClick={(e) => { e.stopPropagation(); remove(note.id) }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (window.confirm(`Delete "${note.title || 'Untitled'}"? This cannot be undone.`)) {
+                        remove(note.id)
+                      }
+                    }}
                     className="opacity-0 group-hover:opacity-100 shrink-0 w-4 h-4 flex items-center justify-center transition-all mt-0.5"
                     style={{ color: 'var(--text-tertiary)' }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
