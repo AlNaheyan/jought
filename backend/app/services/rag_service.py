@@ -26,9 +26,14 @@ def _get_chat_client() -> AsyncOpenAI:
     return _chat_client
 
 
+_embed_model = None
+
 def _get_embedding_model():
-    from sentence_transformers import SentenceTransformer
-    return SentenceTransformer("all-MiniLM-L6-v2")
+    global _embed_model
+    if _embed_model is None:
+        from fastembed import TextEmbedding
+        _embed_model = TextEmbedding("sentence-transformers/all-MiniLM-L6-v2")
+    return _embed_model
 
 
 def _chunk_text(text: str) -> list[str]:
@@ -52,7 +57,7 @@ async def embed_note(db: Session, note: Note) -> None:
         return
 
     model = _get_embedding_model()
-    vectors = model.encode(chunks).tolist()
+    vectors = [v.tolist() for v in model.embed(chunks)]
 
     for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
         db.add(Embedding(
@@ -74,7 +79,7 @@ async def query(
     """Embed question → pgvector cosine similarity search → LLM answer with citations."""
     # 1. Embed the question
     model = _get_embedding_model()
-    q_vector = model.encode([question])[0].tolist()
+    q_vector = list(model.embed([question]))[0].tolist()
 
     # 2. Cosine similarity search — only chunks belonging to this user's notes
     results = (
